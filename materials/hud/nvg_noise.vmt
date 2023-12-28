@@ -1,0 +1,18 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "hud/nvg_noise"
+	"$surfaceprop" "Default"
+	"$additive" 	1
+	"$vertexcolor" 	1
+	"$vertexalpha" 	1
+	"$ignorez"	1
+	"Proxies" 
+{ 
+	"AnimatedTexture" 
+{ 
+	"animatedTextureVar" "$basetexture" 
+	"animatedTextureFrameNumVar" "$frame" 
+	"animatedTextureFrameRate" "60" 
+}
+} 
+}
