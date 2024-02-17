@@ -6,13 +6,19 @@
 	"$vertexcolor" 	1
 	"$vertexalpha" 	1
 	"$ignorez"	1
-	"Proxies" 
-{ 
-	"AnimatedTexture" 
-{ 
-	"animatedTextureVar" "$basetexture" 
-	"animatedTextureFrameNumVar" "$frame" 
-	"animatedTextureFrameRate" "60" 
-}
-} 
+
+	"Proxies" { 
+       "TextureScroll"
+        {
+            "textureScrollVar" "$basetexturetransform"
+            "textureScrollRate" ".3"
+            "textureScrollAngle" "45"
+        }
+
+		"AnimatedTexture" { 
+			"animatedTextureVar" "$basetexture" 
+			"animatedTextureFrameNumVar" "$frame" 
+			"animatedTextureFrameRate" "35" 
+		}
+	} 
 }

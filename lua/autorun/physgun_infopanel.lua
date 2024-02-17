@@ -87,29 +87,32 @@ else
 	CreateConVar( cvar_prefix .. "infopnl_enable", "1", FCVAR_USERINFO )
 	local ModelCvar = CreateConVar( cvar_prefix .. "infopnl_model", "1", FCVAR_ARCHIVE )
 	local XShiftCvar = CreateConVar( cvar_prefix .. "infopnl_shift", "0", FCVAR_ARCHIVE, nil, -5, 5 )
+	local cvarBoneName = CreateConVar( cvar_prefix .. "infopnl_bone", "Base", FCVAR_ARCHIVE )
+	local cvarBoneOffset = CreateConVar( cvar_prefix .. "infopnl_offset", "0 0 0", FCVAR_ARCHIVE )
+	local cvarBoneAngle = CreateConVar( cvar_prefix .. "infopnl_rotate", "0 0 0", FCVAR_ARCHIVE )
 
 	local TOptions = {
 		[1] = {
 			model = "models/props_wasteland/controlroom_monitor001b.mdl",
-			pos = Vector(0, -1, -8.6),
-			ang = Angle( 0, 90, -45 ),
-			scrang = Angle( 90, 180 + 55, 90 + 45 ),
-			scroff = Vector( 2.45, .15, .3 ),
+			pos = Vector( 0, 1.1, -7.2 ),
+			ang = Angle( 50, 90, 0 ),
+			scrang = Angle( 0, 90, 90 + 13 ) ,--Angle( 90, 180 + 55, 90 + 45 ),
+			scroff = Vector( 3.78, -2.424, 0.21 ),--Vector( 2.45, .15, .3 ),
 			sizescale = .019,
 			size = .231,
-			SCRW = 256,
-			SCRH = 210
+			SCRW = 259,
+			SCRH = 228
 		},
 		[2] = {
 			model = "models/kobilica/wiremonitorrtbig.mdl",
-			pos = Vector(0, -1, -8.6),
-			ang = Angle( 0, 90, -45 ),
-			scrang = Angle( 90, 180 + 45, 90 + 45 ),
-			scroff = Vector( 2.25, .3, 4.8 ), --Vector( 2.35, .4, 5.2 ),
+			pos = Vector( 0, -0.2, -9.05 ),
+			ang = Angle( 90 - 26, 90, 0 ),
+			scrang = Angle( 0, 90, 90 ),
+			scroff = Vector( 0.08, -2.2, 3.4 ), --Vector( 2.35, .4, 5.2 ),
 			sizescale = .017,
 			size = .231,
-			SCRW = 256,
-			SCRH = 250
+			SCRW = 260,
+			SCRH = 260
 		}
 	}
 
@@ -138,11 +141,24 @@ else
 		net.SendToServer()
 	end
 
+	local function parseVector( sInput )
+		local tVar = string.Explode( " ", sInput )
+
+		if ( not tVar ) then
+			return Vector()
+		end
+
+		return Vector( tVar[1] or 0, tVar[2] or 0, tVar[3] or 0 )
+	end
+
 	local CEntModel, CEntPos, CEntAng, SCROff, SCRAng = nil, Vector(0,0,0), Angle(0,0,0), Vector(0,0,0), Angle(0,0,0)
-	local CEntSize, ScrScale, CEntBone, XShift = .5, .1, "Base", XShiftCvar:GetFloat()
+	local CEntSize, ScrScale, CEntBone, XShift = .5, .1, cvarBoneName:GetString(), XShiftCvar:GetFloat()
+	local vCustomOffset, vCustomAngle = parseVector( cvarBoneOffset:GetString() ), parseVector( cvarBoneAngle:GetString() )
 	local ParentBone
 
-	if IsValid(CEnt) then CEnt:Remove() end
+	if ( IsValid( CEnt ) ) then 
+		CEnt:Remove()
+	end
 
 	local Noise = Material( "hud/nvg_noise" )
 
@@ -167,13 +183,11 @@ else
 	local speedtext = "Speed: %s"
 	local disttext = "Dist: %s"
 	local format, floor = string.format, math.floor
-	local SetDrawColor = surface.SetDrawColor
-	local SetMaterial = surface.SetMaterial
+	local SetDrawColor, SetMaterial = surface.SetDrawColor, surface.SetMaterial
 	local DrawRect, DrawTexturedRectUV = surface.DrawRect, surface.DrawTexturedRectUV
 	local DrawText = draw.DrawText
 	local sub = string.sub
-	local xspace = 10
-	local yspace = 26
+	local xspace, yspace = 10, 26
 
 	local ClassLen, ClassLong
 	local FormatedClass
@@ -244,7 +258,6 @@ else
 
 		CEnt.Draw = function( self, ScrPos, ScrAng, ScrScale )
 			self:DrawModel()
-
 			Start3D2D( ScrPos, ScrAng, ScrScale )
 				DrawVGUI()
 			End3D2D()
@@ -254,8 +267,8 @@ else
 	local function Switch( index )
 		index = math.Clamp( math.floor(index), 1, 2 )
 		CEntModel = TOptions[index].model
-		CEntPos:Set( TOptions[index].pos )
-		CEntAng:Set( TOptions[index].ang )
+		CEntPos:Set( TOptions[index].pos + vCustomOffset )
+		CEntAng:Set( TOptions[index].ang + Angle( vCustomAngle:Unpack() ) )
 		CEntSize = TOptions[index].size
 		SCRAng = TOptions[index].scrang
 		SCROff = TOptions[index].scroff
@@ -275,10 +288,38 @@ else
 		XShift = math.Clamp( tonumber(new) or 0, -5, 5  )
 	end)
 
+	cvars.AddChangeCallback( cvar_prefix .. "infopnl_bone", function(name, old, new)
+		CEntBone = tostring( new )
+		ParentBone = nil
+		Switch( ModelCvar:GetInt() )
+	end)
+
 	concommand.Add( cvar_prefix .. "infopnl_flushmodel", function()
 		if IsValid(CEnt) then CEnt:Remove() end
 		CEnt = nil
+		ParentBone = nil
 	end)
+
+	cvars.AddChangeCallback( cvar_prefix .. "infopnl_offset", function(name, old, new)
+		vCustomOffset = parseVector( tostring( new ) )
+		Switch( ModelCvar:GetInt() )
+	end)
+
+	cvars.AddChangeCallback( cvar_prefix .. "infopnl_rotate", function(name, old, new)
+		vCustomAngle = parseVector( tostring( new ) )
+		Switch( ModelCvar:GetInt() )
+	end)
+
+	local nNextErrorTime = -1
+	local sError = "Infopanel's attachment bone is invalid\nTry typing (in console) \"infopnl_bone Base\" or \"infopnl_enable 0\""
+	local function notifyError()
+		if ( nNextErrorTime > CurTime() ) then
+			return
+		end
+
+		nNextErrorTime = CurTime() + 10
+		chat.AddText( sError )
+	end
 
 	local function DrawViewModel( vm, ply, weapon )
 		local bHide
@@ -299,6 +340,11 @@ else
 			ParentBone = vm:LookupBone( CEntBone )
 		end
 
+		if ( not ParentBone ) then
+			notifyError()
+			return
+		end
+
 		local MBone = vm:GetBoneMatrix( ParentBone )
 
 		local BPos
@@ -308,7 +354,6 @@ else
 			BPos = MBone:GetTranslation()
 			BAng = MBone:GetAngles()
 		else
-
 			BPos = LastPos
 			BAng = LastAng
 		end
@@ -316,49 +361,16 @@ else
 		LastPos:Set( BPos )
 		LastAng:Set( BAng )
 
-		local VForward 	= Forward( BAng )
-		local VRight 	= Right( BAng )
-		local VUp 		= Up( BAng )
+		local Pos, Ang = LocalToWorld( CEntPos, CEntAng, BPos, BAng )
 
-		local Pos = BPos + VForward * CEntPos.x + VRight * CEntPos.y + VUp * CEntPos.z 
-
-		Pos:Add( -vm:GetRight() * XShift )
+		Pos:Add( Right( Ang ) * XShift )
 
 		CEnt:SetPos( Pos )
+		CEnt:SetAngles( Ang )
 
-		if ( CEntAng.y != 0 ) then
-			RotateAroundAxis( BAng, VUp, 	CEntAng.y )
-		end
+		local vScrPos, aScrAng = LocalToWorld( SCROff, SCRAng, Pos, Ang )
 
-		if ( CEntAng.p != 0 ) then
-			RotateAroundAxis( BAng, VRight, 	CEntAng.p )
-		end
-
-		if ( CEntAng.r != 0 ) then
-			RotateAroundAxis( BAng, VForward, CEntAng.r )
-		end
-
-		CEnt:SetAngles( BAng )
-
-		local EForward = Forward( BAng )
-		EForward:Mul( 4.01 )
-		Pos:Add( EForward )
-
-		if ( SCRAng.r != 0 ) then
-			RotateAroundAxis( BAng, VForward, SCRAng.r )
-		end
-
-		if ( SCRAng.y != 0 ) then
-			RotateAroundAxis( BAng, VUp, 	SCRAng.y )
-		end
-
-		if ( SCRAng.p != 0 ) then
-			RotateAroundAxis( BAng, VRight, 	SCRAng.p )
-		end
-
-		Pos:Add( VForward * SCROff.x + VRight * SCROff.y + VUp * SCROff.z  )
-
-		CEnt:Draw( Pos, BAng, ScrScale )
+		CEnt:Draw( vScrPos, aScrAng, ScrScale )
 	end
 
 	local hookname = "PreDrawViewModel"
